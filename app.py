@@ -200,14 +200,14 @@ def historyMenu(conn):
             break
 
 def main():
-    database = r"Checkpoint2-dbase.db"
+    database = r"database.db"
     # create a database connection
     conn = openConnection(database)
     #createTable(conn)
     
     if conn:
         createTable(conn)
-        print("\nTables are ready to use.")
+        #print("\nTables are ready to use.")
 
     while True:
         print("1. Log in")
