@@ -1,0 +1,87 @@
+Cards API – Developer Reference
+Base URL:
+http://localhost:5000/cards/
+
+--------------------------------------------------
+
+POST /cards/ — Add a New Card
+
+Request Body (JSON):
+{
+  "cardholder_name": "Tulip King",
+  "card_number": "1234567812345678",
+  "card_type": "Visa",
+  "expiration_date": "2026-08",
+  "cvv": "123",
+  "billing_address": "1234 Sad Dev Street"
+}
+
+Response:
+{
+  "message": "Card added successfully"
+}
+
+Notes:
+- card_number must be 16 digits
+- card_type must be one of: "Visa", "MasterCard", "American Express"
+- expiration_date must be in YYYY-MM format
+
+--------------------------------------------------
+
+GET /cards/ — Retrieve All Cards
+
+No request body needed.
+
+Response:
+{
+  "cards": [
+    {
+      "cardholder_name": "Tulip King",
+      "card_number": "1234567812345678",
+      "card_type": "Visa",
+      "expiration_date": "2026-08",
+      "billing_address": "1234 Sad Dev Street"
+    }
+  ]
+}
+
+--------------------------------------------------
+
+PUT /cards/ — Update a Card by Number
+
+Request Body (JSON):
+{
+  "card_number": "1234567812345678",
+  "cardholder_name": "Tulip Emperor",
+  "card_type": "Visa",
+  "expiration_date": "2027-12",
+  "billing_address": "456 Updated Flower Rd"
+}
+
+Response:
+{
+  "message": "Card updated successfully."
+}
+
+Notes:
+- card_number is required to identify the card
+- Only other fields are updated
+
+--------------------------------------------------
+
+DELETE /cards/ — Delete a Card by Number
+
+Request Body (JSON):
+{
+  "card_number": "1234567812345678"
+}
+
+Response:
+{
+  "message": "Card deleted successfully"
+}
+
+--------------------------------------------------
+
+All requests should include the header:
+Content-Type: application/json
