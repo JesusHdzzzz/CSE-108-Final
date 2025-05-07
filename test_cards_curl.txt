@@ -1,0 +1,39 @@
+On a second terminal after running run.py paste the curl commands
+they will only work with user JesusHdzzzz, since I hardcoded that into
+the config.py file. Which currently has user_id and username set to
+22 and "JesusHdzzzz" respectively
+
+--- Create (POST /cards/)
+
+curl -X POST http://127.0.0.1:5000/cards/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "cardholder_name": "Tulip King",
+    "card_number": "1234567812345678",
+    "card_type": "Visa",
+    "expiration_date": "2026-08",
+    "cvv": "123",
+    "billing_address": "1234 Sad Dev Street"
+}'
+
+--- Read (GET /cards/)
+
+curl -X GET http://127.0.0.1:5000/cards/
+
+--- Update (PUT /cards/)
+
+curl -X PUT http://127.0.0.1:5000/cards/ \
+  -H "Content-Type: application/json" \
+  -d '{
+    "card_number": "1234567812345678",
+    "cardholder_name": "Tulip Emperor",
+    "card_type": "Visa",
+    "expiration_date": "2027-12",
+    "billing_address": "456 Updated Flower Rd"
+}'
+
+--- Delete (DELETE /cards/)
+
+curl -X DELETE http://127.0.0.1:5000/cards/ \
+  -H "Content-Type: application/json" \
+  -d '{"card_number": "1234567812345678"}'
