@@ -1,4 +1,17 @@
+# Python
 __pycache__/
 *.pyc
-node_modules/
+*.pyo
+*.pyd
 .env
+database.db
+
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS clutter
+.DS_Store
+Thumbs.db
