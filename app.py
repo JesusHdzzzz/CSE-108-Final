@@ -1,253 +1,235 @@
+from flask import Flask, request, jsonify, session, render_template, redirect, url_for, flash
+from flask_cors import CORS
 import sqlite3
-from sqlite3 import Error
-from create_tables import createTable
-import re
 import config
-from passwordManagement import *
-from creditDebitCardMan import *
-from history import *
+import datetime
+from create_tables import createTable
 
-def openConnection(_dbFile):
-    
-    #print("++++++++++++++++++++++++++++++++++")
-    #print("Open database: ", _dbFile)
+app = Flask(__name__)
+app.secret_key = 'supersecretkey'
+CORS(app)  # Enable cross-origin requests
 
-    conn = None
-    try:
-        conn = sqlite3.connect(_dbFile)
-        #print("success")
-    except Error as e:
-        print(e)
+DATABASE = 'database.db'
 
-    #print("++++++++++++++++++++++++++++++++++")
-
+def get_db_connection():
+    conn = sqlite3.connect(DATABASE)
+    conn.row_factory = sqlite3.Row
     return conn
 
-def closeConnection(_conn, _dbFile):
-    print("++++++++++++++++++++++++++++++++++")
-    print("Close database: ", _dbFile)
+@app.before_first_request
+def initialize_db():
+    conn = get_db_connection()
+    createTable(conn)
+    conn.close()
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    email = data.get('email')
+    username = data.get('username')
+    password = data.get('password')
+
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
     try:
-        _conn.close()
-        print("success")
-    except Error as e:
-        print(e)
+        cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
+        if cursor.fetchone():
+            return jsonify({'success': False, 'message': 'Email already exists'}), 409
 
-    print("++++++++++++++++++++++++++++++++++")
+        cursor.execute("INSERT INTO users (username, email) VALUES (?, ?)", (username, email))
+        conn.commit()
 
-def createAccount(conn):
-    # Step 1: Get Email from the User and Validate It
-    while True:
-        email = input("Enter your email address: ").strip()
+        cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
+        user_id = cursor.fetchone()['user_id']
 
-        # Validate email format
-        if not re.match(r"[^@]+@[^@]+\.[^@]+", email):
-            print("Invalid email format. Please try again.")
-            continue
-        
-        try:
-            # Check if the email already exists in the database
-            cursor = conn.cursor()
-            cursor.execute("SELECT * FROM users WHERE email = ?", (email,))
-            if cursor.fetchone():
-                print("Email already exists. Please try a different email.")
-                continue
+        cursor.execute("INSERT INTO pass (user_id, m_pass) VALUES (?, ?)", (user_id, password))
+        conn.commit()
 
-            break  # Email is valid and doesn't already exist
+        return jsonify({'success': True, 'message': 'Account created successfully'}), 201
+    except sqlite3.Error as e:
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        conn.close()
 
-        except sqlite3.Error as e:
-            print("Database error while checking email: ", e)
+@app.route('/api/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password_input = data.get('password')
 
-    # Step 2: Get the Username
-    while True:
-        username = input("Enter a new username: ").strip()
+    conn = get_db_connection()
+    cursor = conn.cursor()
 
-        try:
-            # Insert the new user into the database
-            conn.execute("INSERT INTO users (username, email) VALUES (?, ?)", (username, email))
-            conn.commit()
-            print(f"Username '{username}' successfully added to the database.")
-            break
-        except sqlite3.IntegrityError:
-            print("Username already exists. Please try a different username.")
+    query = """
+        SELECT pass.m_pass, users.user_id
+        FROM users 
+        JOIN pass ON users.user_id = pass.user_id 
+        WHERE users.username = ?
+    """
+    cursor.execute(query, (username,))
+    user = cursor.fetchone()
 
-    # Step 3: Get the Master Password
-    while True:
-        m_pass = input("Create a master password: ").strip()
+    if user and password_input == user['m_pass']:
+        session['username'] = username
+        session['user_id'] = user['user_id']
+        return jsonify({'success': True, 'message': 'Login successful', 'user_id': user['user_id']}), 200
+    else:
+        return jsonify({'success': False, 'message': 'Invalid credentials'}), 401
 
-        if len(m_pass) < 6:
-            print("Your password must be at least 6 characters long.")
-            continue
+@app.route('/api/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({'success': True, 'message': 'Logged out'}), 200
 
-        try:
-            cursor = conn.cursor()
+@app.route('/passwords/web', methods=['GET'])
+def retrieve_web_pass():
+    website_name = request.args.get('website_name', '').strip().lower()
+    user_id = config.user_id
 
-            # Retrieve user_id for the newly created username
-            cursor.execute("SELECT user_id FROM users WHERE username = ?", (username,))
-            user_id = cursor.fetchone()[0]
-
-            # Save the master password in the `pass` table
-            conn.execute("INSERT INTO pass (user_id, m_pass) VALUES (?, ?)", (user_id, m_pass))
-            conn.commit()
-
-            print("Account successfully created with a master password.")
-            print("You can now log in with your username and password.")
-            break
-        except sqlite3.Error as e:
-            print("Database error while creating password: ", e)
-
-def login(conn):
-    """Handles user login."""
     try:
-        username = input("Enter your username: ").strip()
+        conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Query to fetch the user's stored password based on the username
-        query = """
-            SELECT pass.m_pass, users.user_id
-            FROM users 
-            JOIN pass ON users.user_id = pass.user_id 
-            WHERE users.username = ?
-        """
-        cursor.execute(query, (username,))
-        user = cursor.fetchone()
+        cursor.execute("""
+            SELECT wp.web_pass 
+            FROM web_pass wp
+            JOIN web w ON wp.website_id = w.website_id
+            WHERE wp.user_id = ? AND w.website_name = ?
+        """, (user_id, website_name))
 
-        #print("Username supplied:", username)
-        #print("Is it a tuple?", isinstance((username,), tuple))
+        web_pass = cursor.fetchone()
 
-        if user:
-            # User found; prompt for password
-            stored_password = user[0]  # Extract stored password from the query result
-            password = input("Enter your password: ").strip()
-
-            if password == stored_password:
-                config.username = username # Set the global variable for username
-                config.user_id = user[1] # Set the global variable for user_id
-
-                #print("User ID:", config.user_id)
-                #print("Username:", config.username)
-
-                print("Login successful!")
-                return True
-            else:
-                print("Incorrect password. Please try again.")
+        if web_pass:
+            return jsonify({
+                "username": config.username,
+                "website": website_name,
+                "password": web_pass["web_pass"]
+            })
         else:
-            # User not found
-            print("Username does not exist. Please try again.")
+            return jsonify({"error": "No password found."}), 404
+
     except sqlite3.Error as e:
-        print("Database error: ", e)
-    except Exception as e:
-        print("Unexpected error: ", e)        
-
-def passManage(conn):
-    while True:
-        print('\n|| Password Management ||')
-        print("1. Retrieve a website/group password")
-        print("2. Update a website/group password")
-        print("3. Save a new password for website")
-        print("4. Delete a website password")
-        print("5. Exit")
-
-        choice = input("Enter your choice: ")
-
-        if choice == '1':
-            retrievePassMenu(conn)
-        if choice == '2':
-            updatePassMenu(conn)
-        if choice == '3':
-            savePassMenu(conn)
-        if choice == '4':
-            deletePassMenu(conn)
-        if choice == '5':
-            break
-
-def cardManageMenu(conn):
-    while True:
-        print('\n|| Credit/Debit Card Management ||')
-        print("1. Retrieve a credit/debit card")
-        print("2. Add a new credit/debit card")
-        print("3. Delete a credit/debit card")
-        print("4. Update a credit/debit card")
-        print("5. Exit")
-
-        choice = input("Enter your choice: ")
-
-        if choice == '1':
-            retrieveCard(conn)
-        if choice == '2':
-            addCard(conn)
-        if choice == '3':
-            deleteCard(conn)
-        if choice == '4':
-            updateCard(conn)
-        if choice == '5':
-            break
-
-def historyMenu(conn):
-    while True:
-        print('\n|| History and Logs ||')
-        print("1. View password history")
-        print("2. View credit/debit card history")
-        print("3. Exit")
-
-        choice = input("Enter your choice: ")
-
-        if choice == '1':
-            viewPassHistory(conn)
-        if choice == '2':
-            viewCardHistory(conn)
-        if choice == '3':
-            break
-
-def main():
-    database = r"database.db"
-    # create a database connection
-    conn = openConnection(database)
-    #createTable(conn)
+        return jsonify({"error": str(e)}), 500
     
-    if conn:
-        createTable(conn)
-        #print("\nTables are ready to use.")
+@app.route('/')
+def home():
+    return redirect(url_for('view_cards'))
 
-    while True:
-        print("1. Log in")
-        print("2. Create a new account")
+@app.route('/cards')
+def view_cards():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("""
+        SELECT cardholder_name, card_number, card_type, expiration_date, billing_address
+        FROM cards
+        WHERE user_id = ?;
+    """, (config.user_id,))
+    cards = cursor.fetchall()
+    conn.close()
+    return render_template('cards.html', cards=cards)
 
-        choice = input("Enter your choice: ")
+@app.route('/add_card', methods=['GET', 'POST'])
+def add_card():
+    if request.method == 'POST':
+        cardholder_name = request.form['cardholder_name'].strip()
+        card_number = request.form['card_number'].strip()
+        card_type = request.form['card_type'].strip()
+        expiration_date = request.form['expiration_date'].strip()
+        billing_address = request.form['billing_address'].strip()
 
-        if choice == '1':
-            if login(conn):
-                break
-                
-        elif choice == '2':
-            if createAccount(conn):
-                break
-        else:
-            print("Invalid choice. Please try again.")
+        if not card_number.isdigit() or len(card_number) != 16:
+            flash('Invalid card number.')
+            return redirect(url_for('add_card'))
 
-    
-    while True:
-        print("\n|| Password Manager Menu ||")
-        print("1. Password and Website Management")
-        # Retrieve, save, delete, update passwords
-        print("2. Credit/Debit Card Management")
-        # Add a new credit card, delete a credit card, update a credit card
-        print("3. History and Logs")
-        # Retrieve change history
-        print("4. Exit")
-        choice = input("Enter your choice: ")
+        if card_type not in ['Visa', 'MasterCard', 'American Express']:
+            flash('Invalid card type.')
+            return redirect(url_for('add_card'))
 
-        if choice == '1':
-            passManage(conn)
-        if choice == '2':
-            cardManageMenu(conn)
-        if choice == '3':
-            historyMenu(conn)
-        if choice == '4':
-            config.username = None
-            config.user_id = None
-            closeConnection(conn, database)
-            break
+        try:
+            year, month = map(int, expiration_date.split('-'))
+            now = datetime.datetime.now()
+            if year < now.year or (year == now.year and month < now.month):
+                flash('Card has expired.')
+                return redirect(url_for('add_card'))
+        except:
+            flash('Invalid expiration date format. Use YYYY-MM.')
+            return redirect(url_for('add_card'))
+
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT card_number FROM cards WHERE card_number = ?", (card_number,))
+        if cursor.fetchone():
+            flash('Card number already exists.')
+            conn.close()
+            return redirect(url_for('add_card'))
+
+        cursor.execute("""
+            INSERT INTO cards (cardholder_name, card_number, card_type, expiration_date, billing_address, user_id)
+            VALUES (?, ?, ?, ?, ?, ?);
+        """, (cardholder_name, card_number, card_type, expiration_date, billing_address, config.user_id))
+
+        cursor.execute("""
+            INSERT INTO history (user_id, action_type, action_details, action_timestamp)
+            VALUES (?, 'Card added', ?, ?);
+        """, (config.user_id, f"Added {card_type} card", datetime.datetime.now().strftime('%Y-%m-%d')))
+
+        conn.commit()
+        conn.close()
+        flash('Card added successfully.')
+        return redirect(url_for('view_cards'))
+
+    return render_template('add_card.html')
+
+@app.route('/delete_card/<card_number>')
+def delete_card(card_number):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM cards WHERE card_number = ? AND user_id = ?", (card_number, config.user_id))
+    cursor.execute("""
+        INSERT INTO history (user_id, action_type, action_details, action_timestamp)
+        VALUES (?, 'Card deleted', ?, ?);
+    """, (config.user_id, f"Deleted card ****{card_number[-4:]}", datetime.datetime.now().strftime('%Y-%m-%d')))
+    conn.commit()
+    conn.close()
+    flash('Card deleted successfully.')
+    return redirect(url_for('view_cards'))
+
+@app.route('/update_card/<card_number>', methods=['GET', 'POST'])
+def update_card(card_number):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    if request.method == 'POST':
+        cardholder_name = request.form['cardholder_name'].strip()
+        card_type = request.form['card_type'].strip()
+        expiration_date = request.form['expiration_date'].strip()
+        billing_address = request.form['billing_address'].strip()
+
+        if card_type not in ['Visa', 'MasterCard', 'American Express']:
+            flash('Invalid card type.')
+            return redirect(url_for('update_card', card_number=card_number))
+
+        cursor.execute("""
+            UPDATE cards
+            SET cardholder_name = ?, card_type = ?, expiration_date = ?, billing_address = ?
+            WHERE card_number = ? AND user_id = ?;
+        """, (cardholder_name, card_type, expiration_date, billing_address, card_number, config.user_id))
+
+        cursor.execute("""
+            INSERT INTO history (user_id, action_type, action_details, action_timestamp)
+            VALUES (?, 'Card updated', ?, ?);
+        """, (config.user_id, f"Updated card ****{card_number[-4:]}", datetime.datetime.now().strftime('%Y-%m-%d')))
+
+        conn.commit()
+        conn.close()
+        flash('Card updated successfully.')
+        return redirect(url_for('view_cards'))
+
+    cursor.execute("SELECT * FROM cards WHERE card_number = ? AND user_id = ?", (card_number, config.user_id))
+    card = cursor.fetchone()
+    conn.close()
+    return render_template('update_card.html', card=card)
 
 if __name__ == '__main__':
-    main()
+    app.run(debug=True)
