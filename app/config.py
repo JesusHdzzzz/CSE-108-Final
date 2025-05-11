@@ -5,6 +5,7 @@ username = "JesusHdzzzz"
 user_id = 22
 
 import os
+from dotenv import load_dotenv
 
 class Config:
     SECRET_KEY = os.getenv('SECRET_KEY', "dev_key")
