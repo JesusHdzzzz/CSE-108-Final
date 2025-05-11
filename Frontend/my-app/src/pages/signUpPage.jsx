@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './signUpPage.css'; // We'll create this next
 
 const SignUpPage = () => {
@@ -6,14 +7,41 @@ const SignUpPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const navigate = useNavigate();
 
-  const handleSignUp = (e) => {
+  const handleSignUp = async (e) => {
     e.preventDefault();
-    // You can add your real sign-up logic here, e.g., backend API call
+
+    if (!name || !email || !password || !confirmPassword) {
+      alert('Please fill in all fields.');
+      return;
+    }
+
     if (password !== confirmPassword) {
       alert('Passwords do not match!');
-    } else {
-      console.log('Sign Up with:', { name, email, password });
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/signup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ name, email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Sign up successful!');
+        navigate('/');
+      } else {
+        alert(data.error || 'Signup failed');
+      }
+    } catch (err) {
+      console.error('Error:', err);
+      alert('Server error');
     }
   };
 

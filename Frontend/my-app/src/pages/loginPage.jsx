@@ -1,15 +1,44 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './loginPage.css';
 
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const navigate = useNavigate();
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    // You can add real login logic here
-    console.log('Logging in with:', { email, password });
+
+    if (!email || !password) {
+      alert('Please enter both email and password');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://localhost:5000/login', {
+        method: 'POST',
+        headers: {
+        ' Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await response.json();
+
+      if (response.ok) {
+        alert('Login successful!');
+        // You might store user info/token here
+        // localStorage.setItem('user', JSON.stringify(data.user));
+        navigate('/dashboard'); // or another route after login
+      } else {
+        alert(data.error || 'Login failed');
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      alert('Server error');
+    }
   };
 
   return (
