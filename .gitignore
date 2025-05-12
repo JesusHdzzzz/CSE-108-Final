@@ -11,6 +11,9 @@ node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.cache/
+.env.development
+.env.production
 
 # OS clutter
 .DS_Store
