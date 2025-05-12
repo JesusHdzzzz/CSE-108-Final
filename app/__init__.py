@@ -1,6 +1,6 @@
 from flask_cors import CORS
 from flask import Flask
-from app.routes import auth, cards
+from app.routes import auth, cards, passwords
 
 def create_app():
     app = Flask(__name__)
@@ -10,6 +10,7 @@ def create_app():
 
     app.register_blueprint(auth.bp, url_prefix='/auth')	
     app.register_blueprint(cards.bp, url_prefix='/cards')
+    app.register_blueprint(passwords.bp, url_prefix='/passwords')
     
     print("Registered routes:")
     for rule in app.url_map.iter_rules():
