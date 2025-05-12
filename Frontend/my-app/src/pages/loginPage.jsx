@@ -4,22 +4,26 @@ import { useNavigate } from 'react-router-dom';
 import './loginPage.css';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    const API_BASE = process.env.REACT_APP_API_BASE_URL;
+    const API_BASE = 'http://localhost:5000';
     try {
-      const response = await fetch('http://localhost:5000/login', {
+      const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: {
-        ' Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ email, password })
+        body: JSON.stringify({
+          username,
+          password,
+        }),
       });
 
       const data = await response.json();
@@ -28,13 +32,15 @@ const LoginPage = () => {
         setSuccessMsg(data.message);
         setErrorMsg('');
         console.log("Logged in as user:", data.user_id);
-        // Save user info, redirect, etc.
+        navigate('/home'); 
       } else {
-        alert(data.error || 'Login failed');
+        setErrorMsg(data.error || "Login failed.");
+        setSuccessMsg('');
       }
-    } catch (err) {
-      console.error('Login error:', err);
-      alert('Server error');
+    } catch (error) {
+      console.error("Login error:", error);
+      setErrorMsg("Server error.");
+      setSuccessMsg('');
     }
   };
 
@@ -43,10 +49,10 @@ const LoginPage = () => {
       <form className="login-form" onSubmit={handleLogin}>
         <h2>Login</h2>
         <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           required
         />
         <input
@@ -57,8 +63,10 @@ const LoginPage = () => {
           required
         />
         <button type="submit">Login</button>
+        {errorMsg && <p className="error">{errorMsg}</p>}
+        {successMsg && <p className="success">{successMsg}</p>}
         <p className="signup-link">
-           Don't have an account? <Link to="/signup">Sign up</Link>
+          Don't have an account? <Link to="/signup">Sign up</Link>
         </p>
       </form>
     </div>

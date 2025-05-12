@@ -13,7 +13,7 @@ const HomePage = () => {
       });
 
       if (response.ok) {
-        navigate('/login'); // Redirect to login after logout
+        navigate('/'); // Redirect to login after logout
       } else {
         console.error('Logout failed');
       }

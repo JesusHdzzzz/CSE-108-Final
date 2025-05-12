@@ -1,30 +1,37 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './signUpPage.css'; // Your styling here
 
 const SignUpPage = () => {
-  const [name, setName] = useState('');
+  const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const navigate = useNavigate();
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    const API_BASE = process.env.REACT_APP_API_BASE_URL;
+    const API_BASE = 'http://localhost:5000';
     if (password !== confirmPassword) {
-      alert('Passwords do not match!');
+      setErrorMsg("Passwords do not match!");
+      setSuccessMsg('');
       return;
     }
 
     try {
-      const response = await fetch('http://localhost:5000/signup', {
+      const response = await fetch(`${API_BASE}/auth/register`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password })
+        body: JSON.stringify({
+          username,
+          email,
+          password,
+        }),
       });
 
       const data = await response.json();
@@ -33,13 +40,15 @@ const SignUpPage = () => {
         setSuccessMsg(data.message);
         setErrorMsg('');
         console.log("User registered with user_id:", data.user_id);
-        // Redirect to login page? Clear form? Store user?
+        navigate('/');
       } else {
-        alert(data.error || 'Signup failed');
+        setErrorMsg(data.error || "Registration failed.");
+        setSuccessMsg('');
       }
     } catch (err) {
-      console.error('Error:', err);
-      alert('Server error');
+      console.error("Signup error:", err);
+      setErrorMsg("Server error.");
+      setSuccessMsg('');
     }
   };
 
@@ -49,9 +58,9 @@ const SignUpPage = () => {
         <h2>Sign Up</h2>
         <input
           type="text"
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
           required
         />
         <input
@@ -76,6 +85,10 @@ const SignUpPage = () => {
           required
         />
         <button type="submit">Sign Up</button>
+
+        {errorMsg && <p className="error">{errorMsg}</p>}
+        {successMsg && <p className="success">{successMsg}</p>}
+
         <p className="login-link">
           Already have an account? <a href="/">Login</a>
         </p>
