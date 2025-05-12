@@ -3,7 +3,7 @@ import sqlite3
 from app.config import user_id, username  # must match what's used below
 from app.models.db import get_db_connection
 
-def retrieve_webPass(data):
+def retrieve_webPass(data, user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -40,7 +40,7 @@ def retrieve_webPass(data):
     finally:
         conn.close()
 
-def retrieve_allPass():
+def retrieve_allPass(user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -60,10 +60,11 @@ def retrieve_allPass():
 
     except sqlite3.Error as e:
         print("Database error:", e)
+        return {"error": str(e)}, 500
     finally:
         conn.close()
 
-def update_webPass_service(data):
+def update_webPass_service(data, user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -122,15 +123,16 @@ def update_webPass_service(data):
 
     except sqlite3.Error as e:
         print("Database error: ", e)
+        return {"error": str(e)}, 500
     finally:
         conn.close()
 
-def save_webPass(data):
+def save_webPass(data, user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        website_name = data.get("website_name", "").strip()
+        website_name = data.get("website_name", "").strip().lower()
         web_pass = data.get("web_pass", "").strip()
 
         # Check if website exists
@@ -188,64 +190,62 @@ def save_webPass(data):
 
     except sqlite3.Error as e:
         print("Database error:", e)
+        return {"error": str(e)}, 500
     finally:
         conn.close()
 
-def delete_webPass_service(data):
+import datetime
+import sqlite3
+
+def delete_webPass_service(data, user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
 
-        # Get website details
         website_name = data.get("website_name", "").strip()
 
-        # Check if the website exists
         cursor.execute("""
-            SELECT website_id
-            FROM web
-            WHERE website_name = ?
+            SELECT website_id FROM web WHERE website_name = ?
         """, (website_name,))
         result = cursor.fetchone()
 
         if not result:
-            return {"error": "website does not exist."}, 404
-        
+            return {"error": "Website does not exist."}, 404
+
         website_id = result[0]
 
-        # If the website exists, delete the password
+        # Wrap all changes in one transaction
         cursor.execute("""
-            DELETE FROM web_pass
-            WHERE user_id = ? AND website_id = ?
+            DELETE FROM web_pass WHERE user_id = ? AND website_id = ?
         """, (user_id, website_id))
-        conn.commit()
 
-        # Delete link between user and website in user_web table
         cursor.execute("""
-            DELETE FROM user_web
-            WHERE user_id = ? AND website_id = ?
+            DELETE FROM user_web WHERE user_id = ? AND website_id = ?
         """, (user_id, website_id))
-        conn.commit()
 
-        # Add into history table
         cursor.execute("""
-        INSERT INTO history (user_id, action_type, action_details, action_timestamp)
-        VALUES (?, ?, ?, ?);
+            INSERT INTO history (user_id, action_type, action_details, action_timestamp)
+            VALUES (?, ?, ?, ?)
         """, (
             user_id,
             "Password deleted",
             f"Deleted password for {website_name}",
             datetime.datetime.now().strftime("%Y-%m-%d")
         ))
+
         conn.commit()
 
         return {"message": "Password deleted successfully and stored in History and Logs."}, 200
-        
+
     except sqlite3.Error as e:
+        conn.rollback()
         print("Database error:", e)
+        return {"error": str(e)}, 500
+
     finally:
         conn.close()
 
-def save_website(data):
+def save_website(data, user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -287,10 +287,11 @@ def save_website(data):
         
     except sqlite3.Error as e:
         print("Database error:", e)
+        return {"error": str(e)}, 500
     finally:
         conn.close()
 
-def delete_website_service(data):
+def delete_website_service(data, user_id):
     try:
         conn = get_db_connection()
         cursor = conn.cursor()
@@ -346,5 +347,6 @@ def delete_website_service(data):
         
     except sqlite3.Error as e:
         print("Database error:", e)
+        return {"error": str(e)}, 500
     finally:
         conn.close()

@@ -1,8 +1,8 @@
 # config.py
 
 # A variable to store the currently logged-in user's username
-username = "JesusHdzzzz"
-user_id = 22
+username = None
+user_id = None
 
 import os
 from dotenv import load_dotenv

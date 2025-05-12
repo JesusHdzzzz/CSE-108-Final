@@ -14,7 +14,7 @@ const SignUpPage = () => {
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    const API_BASE = 'http://localhost:5000';
+    const API_BASE = process.env.REACT_APP_API_BASE_URL;
     if (password !== confirmPassword) {
       setErrorMsg("Passwords do not match!");
       setSuccessMsg('');
@@ -27,6 +27,7 @@ const SignUpPage = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           username,
           email,

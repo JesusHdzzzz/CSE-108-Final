@@ -13,13 +13,14 @@ const LoginPage = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    const API_BASE = 'http://localhost:5000';
+    const API_BASE = process.env.REACT_APP_API_BASE_URL;
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           username,
           password,

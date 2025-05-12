@@ -5,15 +5,17 @@ import './homePage.css';
 const HomePage = () => {
   const navigate = useNavigate();
 
+  const API_BASE = process.env.REACT_APP_API_BASE_URL;
+
   const handleLogout = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/logout', {
+      const response = await fetch(`${API_BASE}/auth/logout`, {
         method: 'POST',
-        credentials: 'include', // important for sending session cookies
+        credentials: 'include',
       });
 
       if (response.ok) {
-        navigate('/'); // Redirect to login after logout
+        navigate('/'); // Redirect to login
       } else {
         console.error('Logout failed');
       }
@@ -21,6 +23,7 @@ const HomePage = () => {
       console.error('Error during logout:', error);
     }
   };
+  
 
   return (
     <div className="home-container">
