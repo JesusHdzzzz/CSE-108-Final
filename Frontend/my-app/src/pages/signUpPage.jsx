@@ -33,6 +33,8 @@ const SignUpPage = () => {
           email,
           password,
         }),
+      }, {
+        withCredentials: true
       });
 
       const data = await response.json();
