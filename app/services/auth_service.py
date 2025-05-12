@@ -1,6 +1,7 @@
 import bcrypt
 import re
 from app.models.db import get_db_connection
+from flask import session
 
 def register_user(username, email, password):
     # Email format validation
@@ -63,6 +64,8 @@ def login_user(username, password):
             stored_hash = stored_hash.encode('utf-8')
 
         if bcrypt.checkpw(password.encode('utf-8'), stored_hash):
+            session['user_id'] = user['user_id']
+            session['username'] = username
             return {"message": "Login successful", "user_id": user["user_id"]}, 200
         else:
             return {"error": "Incorrect password"}, 401

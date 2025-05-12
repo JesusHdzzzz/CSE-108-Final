@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './loginPage.css';
 
 const LoginPage = () => {
@@ -7,6 +8,7 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
@@ -18,6 +20,7 @@ const LoginPage = () => {
         headers: {
           'Content-Type': 'application/json',
         },
+        credentials: 'include',
         body: JSON.stringify({
           username,
           password,
@@ -30,7 +33,7 @@ const LoginPage = () => {
         setSuccessMsg(data.message);
         setErrorMsg('');
         console.log("Logged in as user:", data.user_id);
-        // Save user info, redirect, etc.
+        navigate('/home'); 
       } else {
         setErrorMsg(data.error || "Login failed.");
         setSuccessMsg('');

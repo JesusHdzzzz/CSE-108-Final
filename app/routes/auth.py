@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, session
 from app.services.auth_service import register_user, login_user
 
 bp = Blueprint('auth', __name__)
@@ -22,9 +22,14 @@ def login():
     data = request.get_json()
     username = data.get("username")
     password = data.get("password")
-
-    if not username or not password:
-        return jsonify({"error": "Missing username or password"}), 400
-
     result, status = login_user(username, password)
+    
+    if status == 200:
+        session['user_id'] = result['user_id'] 
+        session['username'] = username
     return jsonify(result), status
+
+@bp.route('/logout', methods=['POST'])
+def logout():
+    session.clear()
+    return jsonify({"message": "Logged out"}), 200
