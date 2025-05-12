@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import './loginPage.css';
 
 const LoginPage = () => {
@@ -7,11 +8,12 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const navigate = useNavigate();
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    const API_BASE = process.env.REACT_APP_API_BASE_URL;
+    const API_BASE = 'http://localhost:5000';
     try {
       const response = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
@@ -30,7 +32,7 @@ const LoginPage = () => {
         setSuccessMsg(data.message);
         setErrorMsg('');
         console.log("Logged in as user:", data.user_id);
-        // Save user info, redirect, etc.
+        navigate('/home'); 
       } else {
         setErrorMsg(data.error || "Login failed.");
         setSuccessMsg('');

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './signUpPage.css'; // Your styling here
 
 const SignUpPage = () => {
@@ -8,11 +9,12 @@ const SignUpPage = () => {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const navigate = useNavigate();
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    const API_BASE = process.env.REACT_APP_API_BASE_URL;
+    const API_BASE = 'http://localhost:5000';
     if (password !== confirmPassword) {
       setErrorMsg("Passwords do not match!");
       setSuccessMsg('');
@@ -38,7 +40,7 @@ const SignUpPage = () => {
         setSuccessMsg(data.message);
         setErrorMsg('');
         console.log("User registered with user_id:", data.user_id);
-        // Redirect to login page? Clear form? Store user?
+        navigate('/');
       } else {
         setErrorMsg(data.error || "Registration failed.");
         setSuccessMsg('');
