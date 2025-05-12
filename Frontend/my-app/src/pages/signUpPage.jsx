@@ -1,22 +1,18 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import './signUpPage.css'; // We'll create this next
+import './signUpPage.css'; // Your styling here
 
 const SignUpPage = () => {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const navigate = useNavigate();
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleSignUp = async (e) => {
     e.preventDefault();
 
-    if (!name || !email || !password || !confirmPassword) {
-      alert('Please fill in all fields.');
-      return;
-    }
-
+    const API_BASE = process.env.REACT_APP_API_BASE_URL;
     if (password !== confirmPassword) {
       alert('Passwords do not match!');
       return;
@@ -34,8 +30,10 @@ const SignUpPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Sign up successful!');
-        navigate('/');
+        setSuccessMsg(data.message);
+        setErrorMsg('');
+        console.log("User registered with user_id:", data.user_id);
+        // Redirect to login page? Clear form? Store user?
       } else {
         alert(data.error || 'Signup failed');
       }

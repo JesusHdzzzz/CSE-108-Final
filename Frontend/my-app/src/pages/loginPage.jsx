@@ -6,16 +6,13 @@ import './loginPage.css';
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const navigate = useNavigate();
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
 
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    if (!email || !password) {
-      alert('Please enter both email and password');
-      return;
-    }
-
+    const API_BASE = process.env.REACT_APP_API_BASE_URL;
     try {
       const response = await fetch('http://localhost:5000/login', {
         method: 'POST',
@@ -28,10 +25,10 @@ const LoginPage = () => {
       const data = await response.json();
 
       if (response.ok) {
-        alert('Login successful!');
-        // You might store user info/token here
-        // localStorage.setItem('user', JSON.stringify(data.user));
-        navigate('/dashboard'); // or another route after login
+        setSuccessMsg(data.message);
+        setErrorMsg('');
+        console.log("Logged in as user:", data.user_id);
+        // Save user info, redirect, etc.
       } else {
         alert(data.error || 'Login failed');
       }

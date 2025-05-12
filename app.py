@@ -3,7 +3,7 @@ from flask_cors import CORS
 import sqlite3
 import config
 import datetime
-from create_tables import createTable
+from data_management.create_tables import createTable
 
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'
@@ -16,11 +16,13 @@ def get_db_connection():
     conn.row_factory = sqlite3.Row
     return conn
 
-@app.before_first_request
+@app.before_request
 def initialize_db():
-    conn = get_db_connection()
-    createTable(conn)
-    conn.close()
+    if not hasattr(app, 'db_initialized'):
+        conn = get_db_connection()
+        createTable(conn)
+        conn.close()
+        app.db_initialized = True
 
 @app.route('/api/register', methods=['POST'])
 def register():
